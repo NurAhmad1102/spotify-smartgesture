@@ -6,28 +6,39 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 ## 📌 Overview
 
-**SmartGesture** captures live camera feed, tracks hand landmarks using MediaPipe, recognizes defined finger gestures, and sends system media key commands to control playback (Play/Pause, Next, Previous, Volume Control) on Spotify without needing active app focus.
+**SmartGesture** captures a live webcam feed, tracks hand landmarks using MediaPipe, recognizes defined finger gestures, and sends system media key commands and Spotify hotkeys without requiring active app focus. It features dual-hand control support, gesture stabilization, continuous volume control, and a modern glassmorphic HUD dashboard overlay.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-- **Real-Time Hand Tracking**: Uses MediaPipe Hands for accurate 21-landmark tracking.
-- **Gesture Stabilization**: Implements time-based holding (700 ms) and post-action cooldown (1000 ms) to prevent accidental or duplicate triggers.
-- **HUD & Visual Overlay**: Real-time display of FPS, detection confidence, active gesture, action performed, and cooldown timers.
-- **System-Wide Media Keys**: Controls Spotify and Windows background media playback directly.
+- **Dual-Hand Control System**: Different gesture actions assigned based on physical hand detection (Right Hand for playback/volume, Left Hand for Spotify hotkeys).
+- **Hand Label Stabilizer**: Uses majority voting across a sliding window of frames to eliminate rapid Left/Right hand classification flickering.
+- **Gesture Stabilization & Cooldown**: Implements configurable hold-time stabilization (700 ms) and post-action cooldown (1000 ms) to prevent accidental or duplicate triggers.
+- **Continuous Volume Stepping**: Holding Volume Up or Volume Down continuously steps the volume at smooth 300 ms intervals.
+- **Spotify Auto-Focus & Status Monitor**: Detects if `Spotify.exe` is running and automatically brings the Spotify desktop window into focus when executing advanced hotkeys.
+- **Glassmorphic HUD Dashboard**: Real-time camera overlay showing FPS, Spotify connection status, active hand, current gesture, status messages, and visual cooldown bar.
+- **Standalone Binary Build Support**: Includes PyInstaller configuration (`SpotifyHandController.spec`) to build a single executable (`.exe`).
 
 ---
 
 ## 🖐️ Supported Gestures & Actions
 
-| Gesture | Action | Description |
-| :--- | :--- | :--- |
-| ☝️ **1 Finger** | **Play / Pause** | Toggles playback state |
-| ✌️ **2 Fingers** | **Next Track** | Skips to the next song |
-| 🤟 **3 Fingers** | **Previous Track** | Goes back to previous song |
-| 🖐️ **5 Fingers** | **Volume Up** | Increases system/media volume |
-| ✊ **Closed Fist (0 Fingers)** | **Volume Down** | Decreases system/media volume |
+### 🖐️ Physical Right Hand — Playback & Volume Controls
+| Gesture | Action | Shortcut / Command | Description |
+| :--- | :--- | :--- | :--- |
+| ☝️ **1 Finger** | **Play / Pause** | Media Key | Toggles playback state |
+| ✌️ **2 Fingers** | **Next Track** | Media Key | Skips to the next song |
+| 🖖 **4 Fingers** | **Previous Track** | Media Key | Returns to previous track (double-taps automatically) |
+| 🖐️ **5 Fingers** | **Volume Up** | Media Key | Increases system volume (repeatable on hold) |
+| ✊ **0 Fingers (Fist)** | **Volume Down** | Media Key | Decreases system volume (repeatable on hold) |
+
+### 🤚 Physical Left Hand — Advanced Spotify Hotkeys
+| Gesture | Action | Hotkey | Description |
+| :--- | :--- | :--- | :--- |
+| ☝️ **1 Finger** | **Like Song** | `Alt + Shift + B` | Saves current song to your Library |
+| ✌️ **2 Fingers** | **Shuffle** | `Ctrl + S` | Toggles shuffle mode |
+| 🖖 **4 Fingers** | **Enable Repeat** | `Ctrl + R` | Toggles repeat mode |
 
 ---
 
@@ -36,6 +47,7 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 - **Operating System**: Windows 10 / 11
 - **Python**: Version 3.12+
 - **Hardware**: Standard Webcam
+- **Dependencies**: OpenCV, MediaPipe, `keyboard` module
 
 ---
 
@@ -43,8 +55,8 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/smartGesture.git
-   cd smartGesture
+   git clone https://github.com/NurAhmad1102/spotify-smartgesture.git
+   cd spotify-smartgesture
    ```
 
 2. **Create & Activate Virtual Environment**
@@ -63,53 +75,64 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 ## 🎮 How to Run
 
-Run the application using Python:
-
+### Option 1: Run via Python
 ```bash
 python spotify-hand-controller/main.py
 ```
 
-### Controls:
+### Option 2: Build Standalone Executable (.exe)
+You can bundle the application into a standalone executable using PyInstaller:
+
+```bash
+pip install pyinstaller
+pyinstaller SpotifyHandController.spec
+```
+The resulting executable will be located in the `dist/SpotifyHandController.exe` directory.
+
+### Controls & Exit:
 - Show your hand to the camera to trigger media controls.
 - Press **`q`** or **`Esc`** on the preview window to exit the application cleanly.
+
+---
+
+## ⚙️ Configuration (`config.py`)
+
+You can customize camera settings, confidence thresholds, and gesture timings in `spotify-hand-controller/config.py`:
+
+- `CAMERA_INDEX`: Camera device index (default: `0`).
+- `FRAME_WIDTH` / `FRAME_HEIGHT`: Frame resolution (default: `640x480`).
+- `GESTURE_STABILIZATION_MS`: Gesture hold duration before triggering (default: `700` ms).
+- `GESTURE_COOLDOWN_MS`: Cooldown duration between regular actions (default: `1000` ms).
+- `VOLUME_REPEAT_INTERVAL_MS`: Volume stepping repeat interval on hold (default: `300` ms).
+- `MIN_DETECTION_CONFIDENCE` / `MIN_TRACKING_CONFIDENCE`: MediaPipe confidence thresholds (default: `0.7`).
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-smartGesture/
+spotify-smartgesture/
 │
 ├── spotify-hand-controller/
-│   ├── main.py                   # Application entry point & main loop
-│   ├── camera.py                 # OpenCV webcam stream handler
-│   ├── hand_detector.py          # MediaPipe hand tracking integration
-│   ├── finger_counter.py         # Landmark logic to count open fingers
-│   ├── gesture_detector.py       # Gesture matching & stabilization logic
-│   ├── spotify_controller.py     # Windows media keys controller
-│   ├── overlay.py                # Visual HUD display on camera frame
-│   ├── config.py                 # System configurations & parameters
-│   ├── utils.py                  # Helper functions
-│   └── requirements.txt          # Project Python dependencies
+│   ├── main.py                   # Application entry point & main event loop
+│   ├── camera.py                 # OpenCV webcam video stream handler
+│   ├── hand_detector.py          # MediaPipe hand tracking & landmark extraction
+│   ├── finger_counter.py         # Finger state detection & counting logic
+│   ├── gesture_detector.py       # Dual-hand gesture mapping & stabilizer engine
+│   ├── spotify_controller.py     # Media key and Spotify hotkey automation
+│   ├── overlay.py                # Modern glassmorphic HUD dashboard UI
+│   ├── config.py                 # Application configuration & parameters
+│   ├── utils.py                  # FPS counter & process checking utilities
+│   └── requirements.txt          # Python dependencies
 │
-├── BRD.md                        # Business Requirements Document
-├── PRD.md                        # Product Requirements Document
-├── Technical-Architect.md        # Architecture overview
-├── GUIDE.md                      # System usage guide
-├── .gitignore                    # Git ignore file
+├── SpotifyHandController.spec    # PyInstaller build specification
+├── .gitignore                    # Git ignore rules
 └── README.md                     # Project documentation
 ```
-
----
-
-## ⚙️ Dependencies
-
-- `opencv-python` / `opencv-contrib-python`: Camera capture and frame manipulation
-- `mediapipe`: Real-time hand landmark estimation
-- `keyboard`: Windows virtual keystroke generation
 
 ---
 
 ## 📄 License
 
 This project is open-source and available under the [MIT License](LICENSE).
+
