@@ -1,7 +1,7 @@
 # main.py
 """
 Spotify Hand Gesture Controller
-Main application entry point.
+Main application entry point with Multi-Layer Smart Intent Protection.
 """
 
 import cv2
@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger("Main")
 
 def main():
-    logger.info("Initializing Spotify Hand Gesture Controller...")
+    logger.info("Initializing Spotify Hand Gesture Controller with Smart Intent Protection...")
     
     # Initialize Camera
     camera = Camera(
@@ -34,7 +34,7 @@ def main():
         height=config.FRAME_HEIGHT
     )
     
-    # Initialize Hand Detector
+    # Initialize Hand & Face Detector
     detector = HandDetector(
         max_num_hands=config.MAX_NUM_HANDS,
         min_detection_confidence=config.MIN_DETECTION_CONFIDENCE,
@@ -78,7 +78,6 @@ def main():
                 frame = cv2.flip(frame, 1)
                 
             # 3. Periodically check if Spotify is running (every 60 frames ~ 2 seconds)
-            # Running this check every frame would drop the FPS significantly.
             if frame_count % 60 == 0:
                 spotify_running = is_spotify_running()
             frame_count += 1
@@ -86,23 +85,33 @@ def main():
             # 4. Calculate FPS
             fps = fps_counter.update()
             
-            # 5. Detect hand landmarks
-            frame, hands_data = detector.find_hands(frame, draw=True)
+            # 5. Detect hand & face landmarks
+            frame, hands_data, face_boxes = detector.find_hands(frame, draw=True)
             
             raw_gesture = None
             raw_label = hands_data[0]["label"] if hands_data else None
             stable_label = label_stabilizer.process(raw_label)
+            is_intent_valid = False
+            standby_reason = "No Hand"
             
             if hands_data:
                 hand_data = hands_data[0]
-                # Run finger counter
-                finger_results = FingerCounter.count_fingers(hand_data)
                 
-                # Detect gesture using smoothed stable_label
-                raw_gesture = GestureDetector.detect_gesture(finger_results, stable_label)
+                # Evaluate Multi-Layer Intent Rules
+                is_intent_valid, standby_reason = detector.evaluate_intent(hand_data, face_boxes)
                 
-            # 6. Process gesture stabilization & cooldown
-            triggered_action, status_msg = stabilizer.process(raw_gesture)
+                if is_intent_valid:
+                    # Run finger counter
+                    finger_results = FingerCounter.count_fingers(hand_data)
+                    # Detect gesture using smoothed stable_label
+                    raw_gesture = GestureDetector.detect_gesture(finger_results, stable_label)
+                
+            # 6. Process 1-Second Raised Hand Gate, gesture stabilization & cooldown
+            triggered_action, status_msg = stabilizer.process(
+                gesture=raw_gesture,
+                is_intent_valid=is_intent_valid,
+                standby_reason=standby_reason
+            )
             
             # 7. Execute action if triggered
             if triggered_action:
@@ -114,10 +123,11 @@ def main():
                 frame=frame,
                 fps=fps,
                 spotify_running=spotify_running,
-                stable_label=stable_label,
+                stable_label=stable_label if is_intent_valid else None,
                 raw_gesture=raw_gesture,
                 status_msg=status_msg,
-                cooldown_progress=stabilizer.cooldown_progress
+                cooldown_progress=stabilizer.cooldown_progress,
+                engagement_progress=stabilizer.engagement_progress
             )
             
             # 9. Display the frame in the window

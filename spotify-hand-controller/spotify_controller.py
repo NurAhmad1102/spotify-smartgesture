@@ -16,7 +16,6 @@ class SpotifyController:
         """
         Initializes the SpotifyController and defines the action-to-key mappings.
         """
-        # Map our gesture action strings to keyboard keys/hotkeys
         self.action_map: Dict[str, str] = {
             "Play/Pause": "play/pause media",
             "Next Track": "next track",
@@ -32,23 +31,23 @@ class SpotifyController:
     def focus_spotify(self) -> bool:
         """
         Finds the desktop Spotify window and brings it to the foreground.
-        Necessary for standard application-level hotkeys to work.
-        
-        Returns:
-            bool: True if Spotify was successfully focused, False otherwise.
+        Returns True if Spotify was successfully brought to focus.
         """
         try:
-            # Find the Spotify window handle by its specific class name
             hwnd = ctypes.windll.user32.FindWindowW("SpotifyMainWindow", None)
             if hwnd:
-                # Restore the window if minimized (9 = SW_RESTORE)
-                ctypes.windll.user32.ShowWindow(hwnd, 9)
-                # Set as foreground window
+                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
                 ctypes.windll.user32.SetForegroundWindow(hwnd)
-                logger.info("Spotify Desktop window focused.")
-                return True
+                time.sleep(0.05)
+                fg_hwnd = ctypes.windll.user32.GetForegroundWindow()
+                if fg_hwnd == hwnd:
+                    logger.info("Spotify Desktop window focused successfully.")
+                    return True
+                else:
+                    logger.warning("Attempted to focus Spotify, but another window remains foreground.")
+                    return False
             else:
-                logger.warning("Spotify Desktop window not found.")
+                logger.warning("Spotify Desktop window ('SpotifyMainWindow') not found.")
                 return False
         except Exception as e:
             logger.error(f"Failed to focus Spotify window: {e}")
@@ -56,40 +55,33 @@ class SpotifyController:
 
     def execute_action(self, action: str) -> bool:
         """
-        Sends the appropriate media key command to the OS for the given action.
-        
-        Args:
-            action: The name of the action to execute.
-            
-        Returns:
-            bool: True if key was sent successfully, False otherwise.
+        Sends the appropriate media key or hotkey command.
         """
         key_name = self.action_map.get(action)
         if not key_name:
             logger.warning(f"Attempted to execute unknown action: {action}")
             return False
             
-        # These hotkeys require the Spotify window to be in focus to trigger
         hotkey_actions = ["Like Song", "Shuffle", "Enable Repeat"]
         
         try:
             if action in hotkey_actions:
-                # Attempt to bring Spotify to focus before sending hotkey
                 focused = self.focus_spotify()
                 if not focused:
-                    logger.warning(f"Could not focus Spotify. Hotkey '{key_name}' might not register.")
-                time.sleep(0.1)  # Brief pause to let window focus settle
+                    logger.warning(
+                        f"Spotify is not active/focused. Skipping hotkey '{key_name}' "
+                        f"for action '{action}' to prevent accidental window Save/Screenshot."
+                    )
+                    return False
+                time.sleep(0.05)
                 
             logger.info(f"Executing action '{action}': Sending key/hotkey '{key_name}'")
             
             if action == "Previous Track":
-                # Spotify requires two presses in quick succession to skip to the previous song
-                # if the current song has been playing for more than a few seconds.
                 keyboard.send(key_name)
                 time.sleep(0.15)
                 keyboard.send(key_name)
             else:
-                # Send the key command globally
                 keyboard.send(key_name)
             return True
         except Exception as e:

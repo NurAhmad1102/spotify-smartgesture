@@ -22,14 +22,9 @@ class HUDOverlay:
         """
         Draws a semi-transparent glassmorphic card on the image.
         """
-        # Take a copy for blending
         overlay = img.copy()
         cv2.rectangle(overlay, top_left, bottom_right, bg_color, cv2.FILLED)
-        
-        # Blend the solid card with the original image
         cv2.addWeighted(overlay, alpha, img, 1.0 - alpha, 0, img)
-        
-        # Draw the card border
         cv2.rectangle(img, top_left, bottom_right, border_color, border_thickness)
 
     def draw(
@@ -40,62 +35,52 @@ class HUDOverlay:
         stable_label: Optional[str], 
         raw_gesture: Optional[str], 
         status_msg: str, 
-        cooldown_progress: float
+        cooldown_progress: float,
+        engagement_progress: float = 0.0
     ) -> np.ndarray:
         """
-        Draws the full HUD display on the frame.
-        
-        Args:
-            frame: The input image frame (BGR).
-            fps: Current frame rate.
-            spotify_running: Whether Spotify is running.
-            stable_label: The stabilized hand classification label ("Left", "Right", or None).
-            raw_gesture: Current raw gesture string, or None.
-            status_msg: Current status string from the stabilizer.
-            cooldown_progress: Float between 0.0 and 1.0.
-            
-        Returns:
-            np.ndarray: The frame with the HUD drawn on it.
+        Draws the full HUD display and spatial boundary line on the frame.
         """
+        h, w, _ = frame.shape
+        
+        # 0. Draw Spatial Boundary Line (Keyboard exclusion line at y = SPATIAL_ZONE_MAX_Y)
+        boundary_y = int(h * config.SPATIAL_ZONE_MAX_Y)
+        cv2.line(frame, (0, boundary_y), (w, boundary_y), config.COLOR_LINE, 1)
+        cv2.putText(
+            frame, "KEYBOARD EXCLUSION ZONE (BELOW)", (w - 240, boundary_y + 15),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.35, config.COLOR_TEXT_MUTED, 1, cv2.LINE_AA
+        )
+
         # Card 1: System Metrics (Top-Left)
-        # Coordinates: (15, 15) to (250, 115)
         self.draw_glass_card(frame, (15, 15), (250, 115))
         
-        # Title Header
         cv2.putText(
             frame, "SYSTEM METRICS", (25, 33), 
             cv2.FONT_HERSHEY_SIMPLEX, 0.45, config.COLOR_TEXT_MUTED, 1, cv2.LINE_AA
         )
-        # Separator line
         cv2.line(frame, (25, 40), (240, 40), config.COLOR_BORDER, 1)
         
-        # FPS Label
         cv2.putText(
             frame, f"FPS: {fps:.1f}", (25, 60), 
             cv2.FONT_HERSHEY_SIMPLEX, 0.55, config.COLOR_TEXT_PRIMARY, 1, cv2.LINE_AA
         )
         
-        # Spotify Status Label
         spotify_text = "Spotify: CONNECTED" if spotify_running else "Spotify: NOT RUNNING"
         spotify_color = config.COLOR_ACCENT if spotify_running else config.COLOR_WARNING
         cv2.putText(
             frame, spotify_text, (25, 85), 
             cv2.FONT_HERSHEY_SIMPLEX, 0.55, spotify_color, 1, cv2.LINE_AA
         )
-        # Tiny indicator dot next to Spotify Status
         dot_color = config.COLOR_ACCENT if spotify_running else config.COLOR_WARNING
         cv2.circle(frame, (230, 80), 4, dot_color, cv2.FILLED)
 
         # Card 2: Gesture Controller (Bottom-Left)
-        # Coordinates: (15, 310) to (310, 465)
         self.draw_glass_card(frame, (15, 310), (310, 465))
         
-        # Title Header
         cv2.putText(
             frame, "GESTURE CONTROLLER", (25, 328), 
             cv2.FONT_HERSHEY_SIMPLEX, 0.45, config.COLOR_TEXT_MUTED, 1, cv2.LINE_AA
         )
-        # Separator line
         cv2.line(frame, (25, 335), (300, 335), config.COLOR_BORDER, 1)
         
         # Hand Presence Info
@@ -119,7 +104,7 @@ class HUDOverlay:
             cv2.FONT_HERSHEY_SIMPLEX, 0.55, config.COLOR_TEXT_PRIMARY, 1, cv2.LINE_AA
         )
         
-        # Stabilizer Status
+        # Stabilizer Status & Colors
         status_text = f"Status: {status_msg}"
         status_color = config.COLOR_TEXT_PRIMARY
         
@@ -127,39 +112,43 @@ class HUDOverlay:
             status_color = config.COLOR_ACCENT
         elif "Cooldown" in status_msg:
             status_color = config.COLOR_COOLDOWN
-        elif "No Hand" in status_msg or "Ready" in status_msg:
-            status_color = config.COLOR_TEXT_MUTED
+        elif "Raising Hand" in status_msg:
+            status_color = (255, 200, 50)
+        elif "Standby" in status_msg or "Ready" in status_msg:
+            status_color = getattr(config, 'COLOR_STANDBY', (120, 120, 120))
             
         cv2.putText(
             frame, status_text, (25, 405), 
-            cv2.FONT_HERSHEY_SIMPLEX, 0.55, status_color, 1, cv2.LINE_AA
+            cv2.FONT_HERSHEY_SIMPLEX, 0.52, status_color, 1, cv2.LINE_AA
         )
         
-        # Cooldown Progress Bar (at the bottom of Card 2)
-        # Coordinates: (25, 440) to (300, 450)
+        # Progress Bar Area (at bottom of Card 2)
         bar_x1, bar_y1 = 25, 435
         bar_x2, bar_y2 = 300, 445
         
-        # Draw background bar (border outline)
         cv2.rectangle(frame, (bar_x1, bar_y1), (bar_x2, bar_y2), config.COLOR_BORDER, 1)
         
         if cooldown_progress > 0.0:
-            # Draw remaining cooldown bar (shrinks from right to left)
             fill_width = int((bar_x2 - bar_x1) * cooldown_progress)
             cv2.rectangle(
-                frame, 
-                (bar_x1, bar_y1), 
-                (bar_x1 + fill_width, bar_y2), 
-                config.COLOR_COOLDOWN, 
-                cv2.FILLED
+                frame, (bar_x1, bar_y1), (bar_x1 + fill_width, bar_y2), 
+                config.COLOR_COOLDOWN, cv2.FILLED
             )
-            # Label
             cv2.putText(
                 frame, "COOLDOWN ACTIVE", (25, 427), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.35, config.COLOR_COOLDOWN, 1, cv2.LINE_AA
             )
+        elif 0.0 < engagement_progress < 1.0:
+            fill_width = int((bar_x2 - bar_x1) * engagement_progress)
+            cv2.rectangle(
+                frame, (bar_x1, bar_y1), (bar_x1 + fill_width, bar_y2), 
+                (255, 200, 50), cv2.FILLED
+            )
+            cv2.putText(
+                frame, "ENGAGING HAND (INSTANT 0.3s)", (25, 427), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 200, 50), 1, cv2.LINE_AA
+            )
         else:
-            # Ready indicator
             cv2.putText(
                 frame, "SYSTEM READY", (25, 427), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.35, config.COLOR_ACCENT, 1, cv2.LINE_AA

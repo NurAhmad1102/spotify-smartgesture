@@ -1,16 +1,16 @@
-# 🖐️ SmartGesture - Spotify Hand Controller
+# SmartGesture - Spotify Hand Controller
 
 A real-time hand gesture recognition application built with **Python**, **OpenCV**, and **MediaPipe** to control Spotify and system media playback seamlessly on Windows.
 
 ---
 
-## 📌 Overview
+## Overview
 
 **SmartGesture** captures a live webcam feed, tracks hand landmarks using MediaPipe, recognizes defined finger gestures, and sends system media key commands and Spotify hotkeys without requiring active app focus. It features dual-hand control support, gesture stabilization, continuous volume control, and a modern glassmorphic HUD dashboard overlay.
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 - **Dual-Hand Control System**: Different gesture actions assigned based on physical hand detection (Right Hand for playback/volume, Left Hand for Spotify hotkeys).
 - **Hand Label Stabilizer**: Uses majority voting across a sliding window of frames to eliminate rapid Left/Right hand classification flickering.
@@ -22,7 +22,7 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 ---
 
-## 🖐️ Supported Gestures & Actions
+## Supported Gestures & Actions
 
 ### 🖐️ Physical Right Hand — Playback & Volume Controls
 | Gesture | Action | Shortcut / Command | Description |
@@ -42,7 +42,7 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 ---
 
-## 🛠️ Prerequisites & Requirements
+## Prerequisites & Requirements
 
 - **Operating System**: Windows 10 / 11
 - **Python**: Version 3.12+
@@ -51,7 +51,7 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 1. **Clone the Repository**
    ```bash
@@ -73,7 +73,7 @@ A real-time hand gesture recognition application built with **Python**, **OpenCV
 
 ---
 
-## 🎮 How to Run
+## How to Run
 
 ### Option 1: Run via Python
 ```bash
@@ -95,7 +95,7 @@ The resulting executable will be located in the `dist/SpotifyHandController.exe`
 
 ---
 
-## ⚙️ Configuration (`config.py`)
+## Configuration (`config.py`)
 
 You can customize camera settings, confidence thresholds, and gesture timings in `spotify-hand-controller/config.py`:
 
@@ -108,7 +108,7 @@ You can customize camera settings, confidence thresholds, and gesture timings in
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 spotify-smartgesture/
@@ -132,7 +132,7 @@ spotify-smartgesture/
 
 ---
 
-## 📄 License
+## License
 
 This project is open-source and available under the [MIT License](LICENSE).
 
